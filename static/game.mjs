@@ -17,6 +17,7 @@ const HERO_SPEED = nbPlayers => 200 * scaleGame(nbPlayers)
 const HERO_PARALYSIS_DUR = 2
 
 const MONSTER_SIZE = 80
+const MONSTER_SPEED = 100
 
 const STAR_SIZE = nbPlayers => 80 * scaleGame(nbPlayers)
 const STAR_SPEED = nbPlayers => 100 * scaleGame(nbPlayers)
@@ -231,7 +232,7 @@ class GameScene extends Group {
 
   mayAddMonster() {
     if(this.time > this.nextMonsterTime) {
-      addTo(this.monsters, new Monster(random() > .5, HEIGHT * random()))
+      addTo(this.monsters, new Monster(random() > .5 ? 1 : -1, HEIGHT * random()))
       this.nextMonsterTime = this.time + 5
     }
   }
@@ -264,11 +265,6 @@ class GameScene extends Group {
       if(!hero.isParalysed(this.time)) {
         for(const monster of this.monsters.children) {
           if(checkHit(hero, monster)) {
-            addTo(this.notifs, new Notif(
-              "- 1",
-              hero.translation.x, hero.translation.y,
-              { fill: "red" }
-            ))
             hero.onMonsterHit(this.time)
             this.scoresPanel.syncScores()
           }
@@ -447,7 +443,14 @@ class Hero extends Group {
 
   onMonsterHit(time) {
     this.paralysisEndTime = time + HERO_PARALYSIS_DUR
-    this.score = max(0, this.score - 1)
+    if(this.score > 10) {
+      this.score -= 1
+      addTo(this.scene.notifs, new Notif(
+        "- 1",
+        this.translation.x, this.translation.y,
+        { fill: "red" }
+      ))
+    }
     ouchAud.replay()
   }
 
@@ -472,7 +475,7 @@ class Star extends Two.Sprite {
   constructor(scn, dir, y) {
     super(
       urlAbsPath("assets/star.png"),
-      dir ? WIDTH + 50 : -50, y
+      dir < 0 ? WIDTH + 50 : -50, y
     )
     this.scene = scn
     this.game = scn.game
@@ -516,17 +519,17 @@ class Monster extends Two.Sprite {
   constructor(dir, y) {
     super(
       urlAbsPath("assets/monster.png"),
-      dir ? WIDTH + 50 : -50, y
+      dir < 0 ? WIDTH + 50 : -50, y
     )
     this.width = this.height = MONSTER_SIZE
     this.scale = MONSTER_SIZE / 50
 
-    this.spdX = dir ? -100 : 100
+    this.dir = dir
   }
 
   update(time) {
-    this.translation.x += this.spdX / FPS
-    if((this.x < -50 && this.spdX < 0) || (this.x > WIDTH + 50 && this.spdX > 0)) this.remove()
+    this.translation.x += this.dir * MONSTER_SPEED / FPS
+    if((this.x < -50 && this.dir < 0) || (this.x > WIDTH + 50 && this.dir > 0)) this.remove()
   }
 
   getHitBox() {
